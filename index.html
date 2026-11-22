@@ -145,6 +145,7 @@ const pad = n => String(n).padStart(2, '0');
 const fmt = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
 const addMin = (d, m) => new Date(d.getTime() + Math.round(m) * 60000);
 const isoDate = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const floor5 = d => new Date(Math.floor(d.getTime() / 300000) * 300000); // afronden naar beneden op 5 min
 const dur = m => Math.floor(m / 60) + ':' + pad(Math.round(m % 60));
 const DIRS = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
 const dirName = deg => deg == null ? '?' : DIRS[Math.round(deg / 22.5) % 16];
@@ -189,7 +190,7 @@ function schedule(cond) {
     : { sgvos: leg('os', 'sgv', S.legSgvOs, EXPOSE.sgvos), dhsgv: leg('sgv', 'dhh', S.legDhSgv, EXPOSE.dhsgv), osdh: leg('dhh', 'os', S.legOsDh, EXPOSE.osdh) };
   let rows, sgvTime;
   if (mode === 'breng') {
-    const dep = addMin(T, -L.osdh);
+    const dep = floor5(addMin(T, -L.osdh));
     sgvTime = addMin(T, L.dhsgv);
     const back = addMin(sgvTime, L.sgvos);
     rows = [
@@ -199,7 +200,7 @@ function schedule(cond) {
       ['Aankomst Oudeschild', back, ''],
     ];
   } else {
-    const dep = addMin(T, -L.sgvos);
+    const dep = floor5(addMin(T, -L.sgvos));
     sgvTime = T;
     const dh = addMin(T, L.dhsgv);
     const back = addMin(dh, L.osdh);
