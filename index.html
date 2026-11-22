@@ -194,7 +194,8 @@ function schedule(cond) {
     const back = addMin(sgvTime, L.sgvos);
     rows = [
       ['Vertrek Oudeschild', dep, ''],
-      ['Vertrek Den Helder', T, 'opgegeven tijd', true],
+      ['Den Helder', T, 'opgegeven tijd', true],
+      ['Schulpengat verkenner', sgvTime, ''],
       ['Aankomst Oudeschild', back, ''],
     ];
   } else {
@@ -204,8 +205,8 @@ function schedule(cond) {
     const back = addMin(dh, L.osdh);
     rows = [
       ['Vertrek Oudeschild', dep, ''],
-      ['Schulpengat verkenner – loods van schip', T, 'opgegeven tijd', true],
-      ['Den Helder – loods afzetten', dh, ''],
+      ['Schulpengat verkenner', T, 'opgegeven tijd', true],
+      ['Den Helder', dh, ''],
       ['Aankomst Oudeschild', back, ''],
     ];
   }
