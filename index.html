@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loodstocht – De Vrijheid</title>
+<style>
+  :root { --bg:#f4f6f8; --card:#fff; --ink:#1b2733; --muted:#5d6b78; --accent:#0b5c8a; --warn:#b35c00; --bad:#a3261b; --ok:#2d7a3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:720px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.35rem; margin:.2em 0 .1em; }
+  h2 { font-size:1.05rem; margin:0 0 .6em; }
+  .sub { color:var(--muted); margin:0 0 1em; font-size:.9rem; }
+  .card { background:var(--card); border-radius:12px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .seg { display:flex; gap:8px; margin-bottom:12px; }
+  .seg button { flex:1; padding:12px 8px; border:2px solid var(--accent); background:#fff; color:var(--accent); border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; }
+  .seg button.on { background:var(--accent); color:#fff; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > label { flex:1; min-width:140px; }
+  label { display:block; font-size:.85rem; color:var(--muted); }
+  input, select { width:100%; font-size:1.1rem; padding:8px; border:1px solid #c9d2da; border-radius:8px; margin-top:3px; background:#fff; color:var(--ink); }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:7px 4px; border-bottom:1px solid #eef1f4; vertical-align:top; }
+  td.t { font-weight:700; font-size:1.2rem; text-align:right; white-space:nowrap; width:5.5em; font-variant-numeric:tabular-nums; }
+  td.n { color:var(--muted); font-size:.85rem; }
+  tr.fixed td { background:#eaf3f9; }
+  .alarm { display:flex; align-items:center; justify-content:space-between; background:var(--ink); color:#fff; border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .alarm .big { font-size:2.2rem; font-weight:800; font-variant-numeric:tabular-nums; }
+  .pill { display:inline-block; padding:2px 10px; border-radius:99px; font-size:.85rem; font-weight:600; color:#fff; }
+  .c-mooi{background:var(--ok)} .c-normaal{background:var(--accent)} .c-slecht{background:var(--warn)} .c-zwaar{background:var(--bad)}
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .kv { background:#f6f8fa; border-radius:8px; padding:8px 10px; }
+  .kv b { display:block; font-size:1.1rem; }
+  .kv span { font-size:.8rem; color:var(--muted); }
+  .warn { color:var(--warn); font-weight:600; }
+  .muted { color:var(--muted); font-size:.85rem; }
+  details summary { cursor:pointer; font-weight:600; }
+  .settings { display:grid; grid-template-columns:1fr 90px; gap:6px 10px; align-items:center; margin-top:10px; }
+  .settings input { font-size:1rem; padding:5px; }
+  a { color:var(--accent); }
+  ul.links { padding-left:1.1em; margin:.3em 0; } ul.links li { margin:.2em 0; }
+  button.small { padding:6px 10px; border-radius:8px; border:1px solid #c9d2da; background:#fff; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Loodstocht De Vrijheid</h1>
+  <p class="sub">Vertrek en aankomst Oudeschild · loods voor Tundraland / Tavastland</p>
+
+  <div class="card">
+    <div class="seg">
+      <button id="bBreng" class="on">Wegbrengen<br><small>Den Helder → schip</small></button>
+      <button id="bHaal">Ophalen<br><small>schip → Den Helder</small></button>
+    </div>
+    <div class="row">
+      <label>Datum <input type="date" id="date"></label>
+      <label id="timeLabel">Tijd in Den Helder <input type="time" id="time" value="06:00"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Omstandigheden
+        <select id="cond">
+          <option value="auto">Automatisch (verwachting)</option>
+          <option value="mooi">Mooi weer (~1:30)</option>
+          <option value="normaal">Normaal (~1:45)</option>
+          <option value="slecht">Slecht weer (~2:00)</option>
+          <option value="zwaar">Zwaar weer (~2:15)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="alarm"><div>Wekker zetten<br><small id="alarmNote"></small></div><div class="big" id="alarm">--:--</div></div>
+
+  <div class="card">
+    <h2>Schema <span id="condPill"></span></h2>
+    <table id="schedule"></table>
+    <p class="muted" id="total"></p>
+  </div>
+
+  <div class="card">
+    <h2>Verwachting</h2>
+    <div id="wx" class="muted">Laden…</div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Instellingen vaartijden (aanpassen na je metingen)</summary>
+      <p class="muted">Vaartijden bij <b>normale</b> omstandigheden, in minuten. Bij ander weer wordt de vaartijd vermenigvuldigd met de factor. Wordt in deze browser bewaard.</p>
+      <div class="settings" id="settings"></div>
+      <p><button class="small" id="reset">Standaardwaarden terugzetten</button></p>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Bronnen</h2>
+    <ul class="links">
+      <li><a href="https://rwsos.rws.nl/viewer/map/noordzee/golven/location/SGAT" target="_blank">Golfhoogte Schulpengat (RWS)</a></li>
+      <li><a href="https://rwsos.rws.nl/viewer/map/noordzee/stroming/location/matroos.petten%20zuid" target="_blank">Stroming Petten Zuid (RWS)</a></li>
+      <li><a href="https://waterinfo.rws.nl/publiek/astronomische-getij/denhelder.marsdiep/details" target="_blank">Astronomisch getij Den Helder</a> · <a href="https://waterinfo.rws.nl/publiek/waterhoogte/denhelder.marsdiep/details" target="_blank">Waterhoogte</a></li>
+      <li><a href="https://waterinfo.rws.nl/publiek/wind/texel.hors/details" target="_blank">Wind Texel Hors (RWS)</a></li>
+      <li><a href="https://nl.windfinder.com/weatherforecast/den_helder_marsdiep" target="_blank">Windfinder Marsdiep</a></li>
+      <li><a href="https://www.knmi.nl/nederland-nu/maritiem/waarschuwingen-en-verwachtingen/kustwateren" target="_blank">KNMI kustverwachting</a></li>
+    </ul>
+    <p class="muted">De automatische verwachting in deze tool komt van Open-Meteo (wind: weermodellen incl. KNMI; golven, stroming en waterstand: zeemodellen). Het astronomisch getij van RWS blijft leidend voor HW/LW-tijden.</p>
+  </div>
+</main>
+
+<script>
+// ---------- Locaties ----------
+const LOC = {
+  sgv: { lat: 52.885, lon: 4.615 },  // Schulpengat verkenner (ongeveer)
+  dh:  { lat: 52.975, lon: 4.760 },  // Marsdiep bij Den Helder (getij)
+  dhh: { lat: 52.963, lon: 4.778 },  // haven Den Helder
+  os:  { lat: 53.040, lon: 4.857 },  // haven Oudeschild
+};
+
+// ---------- Instellingen ----------
+const DEFAULTS = {
+  legOsDh: 25,   // Oudeschild <-> haven Den Helder
+  stopDh: 5,     // loods aan/van boord in Den Helder
+  legDhSgv: 30,  // Den Helder <-> Schulpengat verkenner
+  stopSgv: 5,    // langszij bij het schip
+  legSgvOs: 40,  // Schulpengat verkenner <-> Oudeschild
+  alarm: 30,     // wekker -> vertrek Oudeschild
+  fMooi: 0.85, fNormaal: 1.0, fSlecht: 1.15, fZwaar: 1.3,
+  golfTegen: 0.10, // extra vaartijd per meter golfhoogte recht tegen (0,10 = 10%)
+};
+const LABELS = {
+  legOsDh: 'Oudeschild ↔ Den Helder', stopDh: 'Stop Den Helder', legDhSgv: 'Den Helder ↔ Schulpengat verkenner',
+  stopSgv: 'Langszij bij schip', legSgvOs: 'Schulpengat verkenner ↔ Oudeschild', alarm: 'Wekker vóór vertrek',
+  fMooi: 'Factor mooi weer', fNormaal: 'Factor normaal', fSlecht: 'Factor slecht weer', fZwaar: 'Factor zwaar weer',
+  golfTegen: 'Extra per m golf recht tegen (0,10 = 10%)',
+};
+let S = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('loods-settings') || '{}'));
+
+const COND = {
+  mooi:    { name: 'Mooi weer', f: () => S.fMooi },
+  normaal: { name: 'Normaal',   f: () => S.fNormaal },
+  slecht:  { name: 'Slecht weer', f: () => S.fSlecht },
+  zwaar:   { name: 'Zwaar weer', f: () => S.fZwaar },
+};
+
+// ---------- Helpers ----------
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const fmt = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
+const addMin = (d, m) => new Date(d.getTime() + Math.round(m) * 60000);
+const isoDate = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const dur = m => Math.floor(m / 60) + ':' + pad(Math.round(m % 60));
+const DIRS = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
+const dirName = deg => deg == null ? '?' : DIRS[Math.round(deg / 22.5) % 16];
+function bft(kn) {
+  const lim = [1, 4, 7, 11, 17, 22, 28, 34, 41, 48, 56, 64];
+  let b = 0; while (b < lim.length && kn >= lim[b]) b++; return b;
+}
+
+let mode = 'breng';
+let wxData = null;   // { times:[Date], wind, gust, wdir, wave, wper, cur, cdir, sea }
+
+// ---------- Golven tegen / mee ----------
+// Hoe blootgesteld elk deel is aan de Noordzeegolven (1 = volledig, Marsdiep binnen is luwer)
+const EXPOSE = { osdh: 0.3, dhsgv: 1.0, sgvos: 0.7 };
+function bearing(a, b) {
+  const r = Math.PI / 180, p1 = a.lat * r, p2 = b.lat * r, dl = (b.lon - a.lon) * r;
+  const y = Math.sin(dl) * Math.cos(p2), x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return (Math.atan2(y, x) / r + 360) % 360;
+}
+function seaRel(heading, waveFrom) { // 1 = recht tegen, 0 = dwars, -1 = recht mee
+  return Math.cos((heading - waveFrom) * Math.PI / 180);
+}
+function waveCorr(from, to, exposure, t) {
+  if (!wxData || !wxData.wdirWave) return 1;
+  const h = at(wxData.wave, t), d = atDir(wxData.wdirWave, t);
+  if (h == null || d == null) return 1;
+  const rel = seaRel(bearing(LOC[from], LOC[to]), d);
+  return Math.max(0.8, 1 + S.golfTegen * h * rel * exposure);
+}
+function seaText(rel) { return rel > 0.5 ? 'golven tegen' : rel < -0.5 ? 'golven mee' : 'golven dwars'; }
+
+// ---------- Schema berekenen ----------
+function schedule(cond) {
+  const f = COND[cond].f();
+  const [h, m] = $('time').value.split(':').map(Number);
+  const T = new Date($('date').value + 'T00:00');
+  T.setHours(h, m, 0, 0);
+  // vaartijd per deel: weerfactor × correctie voor golven tegen/mee
+  const leg = (from, to, base, exp) => base * f * waveCorr(from, to, exp, T);
+  const L = mode === 'breng'
+    ? { osdh: leg('os', 'dhh', S.legOsDh, EXPOSE.osdh), dhsgv: leg('dhh', 'sgv', S.legDhSgv, EXPOSE.dhsgv), sgvos: leg('sgv', 'os', S.legSgvOs, EXPOSE.sgvos) }
+    : { sgvos: leg('os', 'sgv', S.legSgvOs, EXPOSE.sgvos), dhsgv: leg('sgv', 'dhh', S.legDhSgv, EXPOSE.dhsgv), osdh: leg('dhh', 'os', S.legOsDh, EXPOSE.osdh) };
+  let rows;
+  if (mode === 'breng') {
+    const dep = addMin(T, -L.osdh);
+    const dhDep = addMin(T, S.stopDh);
+    const sgv = addMin(dhDep, L.dhsgv);
+    const sgvDep = addMin(sgv, S.stopSgv);
+    const back = addMin(sgvDep, L.sgvos);
+    rows = [
+      ['Vertrek Oudeschild', dep, ''],
+      ['Den Helder – loods aan boord', T, 'opgegeven tijd', true],
+      ['Vertrek Den Helder', dhDep, ''],
+      ['Schulpengat verkenner – loods naar schip', sgv, ''],
+      ['Aankomst Oudeschild', back, ''],
+    ];
+  } else {
+    const dep = addMin(T, -L.sgvos);
+    const sgvDep = addMin(T, S.stopSgv);
+    const dh = addMin(sgvDep, L.dhsgv);
+    const dhDep = addMin(dh, S.stopDh);
+    const back = addMin(dhDep, L.osdh);
+    rows = [
+      ['Vertrek Oudeschild', dep, ''],
+      ['Schulpengat verkenner – loods van schip', T, 'opgegeven tijd', true],
+      ['Den Helder – loods afzetten', dh, ''],
+      ['Vertrek Den Helder', dhDep, ''],
+      ['Aankomst Oudeschild', back, ''],
+    ];
+  }
+  return { rows, start: rows[0][1], end: rows[rows.length - 1][1], sgvTime: rows.find(r => r[0].startsWith('Schulpengat'))[1], f };
+}
+
+// ---------- Omstandigheden uit verwachting ----------
+function windowStats(start, end) {
+  if (!wxData) return null;
+  const s = start.getTime() - 3600e3, e = end.getTime() + 3600e3;
+  const idx = wxData.times.map((t, i) => [t.getTime(), i]).filter(([t]) => t >= s && t <= e).map(([, i]) => i);
+  if (!idx.length) return null;
+  const max = arr => { const v = idx.map(i => arr[i]).filter(x => x != null); return v.length ? Math.max(...v) : null; };
+  return { wind: max(wxData.wind), gust: max(wxData.gust), wave: max(wxData.wave) };
+}
+function classify(st) {
+  if (!st || (st.wind == null && st.wave == null)) return null;
+  const b = st.wind != null ? bft(st.wind) : 0;
+  const w = st.wave != null ? st.wave : 0;
+  if (w >= 1.75 || b >= 7) return 'zwaar';
+  if (w >= 1.1 || b >= 6) return 'slecht';
+  if (w >= 0.6 || b >= 4) return 'normaal';
+  return 'mooi';
+}
+
+// Waarde op tijdstip t (lineair geïnterpoleerd uit uurdata)
+function at(arr, t) {
+  if (!wxData) return null;
+  const ts = wxData.times, x = t.getTime();
+  for (let i = 0; i < ts.length - 1; i++) {
+    const a = ts[i].getTime(), b = ts[i + 1].getTime();
+    if (x >= a && x <= b) {
+      if (arr[i] == null || arr[i + 1] == null) return arr[i] ?? arr[i + 1];
+      return arr[i] + (arr[i + 1] - arr[i]) * (x - a) / (b - a);
+    }
+  }
+  return null;
+}
+function atDir(arr, t) { // dichtstbijzijnde uur voor richtingen
+  if (!wxData) return null;
+  let best = null, bd = Infinity;
+  wxData.times.forEach((ti, i) => { const d = Math.abs(ti - t); if (d < bd && arr[i] != null) { bd = d; best = arr[i]; } });
+  return bd < 2 * 3600e3 ? best : null;
+}
+
+// HW/LW uit waterstandreeks (parabolische interpolatie rond extremen)
+function tideExtremes() {
+  if (!wxData || !wxData.sea.some(v => v != null)) return [];
+  const out = [], y = wxData.sea, t = wxData.times;
+  for (let i = 1; i < y.length - 1; i++) {
+    if (y[i - 1] == null || y[i] == null || y[i + 1] == null) continue;
+    const isMax = y[i] > y[i - 1] && y[i] >= y[i + 1], isMin = y[i] < y[i - 1] && y[i] <= y[i + 1];
+    if (!isMax && !isMin) continue;
+    const den = y[i - 1] - 2 * y[i] + y[i + 1];
+    const off = den !== 0 ? 0.5 * (y[i - 1] - y[i + 1]) / den : 0;
+    out.push({ type: isMax ? 'HW' : 'LW', time: new Date(t[i].getTime() + off * 3600e3), h: y[i] - 0.25 * (y[i - 1] - y[i + 1]) * off });
+  }
+  // ruis wegfilteren: kleine bulten (<30 cm) en dubbele toppen samenvoegen
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let i = 0; i < out.length - 1; i++) {
+      const a = out[i], b = out[i + 1];
+      if (a.type === b.type) {
+        const keepA = a.type === 'HW' ? a.h >= b.h : a.h <= b.h;
+        out.splice(keepA ? i + 1 : i, 1); changed = true; break;
+      }
+      if (Math.abs(a.h - b.h) < 0.3) { out.splice(i, 2); changed = true; break; }
+    }
+  }
+  return out;
+}
+
+// ---------- Render ----------
+function render() {
+  $('timeLabel').firstChild.textContent = mode === 'breng' ? 'Tijd in Den Helder ' : 'Tijd bij Schulpengat verkenner ';
+  let cond = $('cond').value, auto = cond === 'auto', st = null;
+  if (auto) {
+    // iteratief: eerst normaal, dan op basis van het vaarvenster herberekenen
+    cond = 'normaal';
+    for (let k = 0; k < 2; k++) {
+      const sc = schedule(cond);
+      st = windowStats(sc.start, sc.end);
+      cond = classify(st) || 'normaal';
+    }
+  }
+  const sc = schedule(cond);
+  $('schedule').innerHTML = sc.rows.map(([n, t, note, fixed]) =>
+    `<tr class="${fixed ? 'fixed' : ''}"><td>${n}${note ? `<br><span class="n">${note}</span>` : ''}</td><td class="t">${fmt(t)}</td></tr>`).join('');
+  const alarm = addMin(sc.start, -S.alarm);
+  $('alarm').textContent = fmt(alarm);
+  $('alarmNote').textContent = `${S.alarm} min vóór vertrek Oudeschild (${fmt(sc.start)})`;
+  const total = (sc.end - sc.start) / 60000;
+  $('condPill').innerHTML = `<span class="pill c-${cond}">${COND[cond].name}${auto ? (st ? ' · auto' : ' · geen data') : ''}</span>`;
+  $('total').textContent = `Totale tocht ${dur(total)} (vaartijdfactor ×${sc.f}).`;
+  renderWx(sc, st);
+}
+
+function renderWx(sc, st) {
+  if (!wxData) return;
+  if (wxData.error) { $('wx').innerHTML = `<span class="warn">${wxData.error}</span>`; return; }
+  const t = sc.sgvTime;
+  const wind = at(wxData.wind, t), gust = at(wxData.gust, t), wdir = atDir(wxData.wdir, t);
+  const wave = at(wxData.wave, t), wper = at(wxData.wper, t);
+  const cur = at(wxData.cur, t), cdir = atDir(wxData.cdir, t);
+  if (wind == null && wave == null) {
+    $('wx').innerHTML = '<span class="warn">Geen verwachting beschikbaar voor deze datum (meestal max. ~7 dagen vooruit).</span>';
+    return;
+  }
+  const kv = (v, l) => `<div class="kv"><b>${v}</b><span>${l}</span></div>`;
+  let html = `<p style="margin-top:0">Bij Schulpengat verkenner om <b>${fmt(t)}</b>:</p><div class="grid">`;
+  html += kv(wind != null ? `${bft(wind)} Bft ${dirName(wdir)}` : '?', `wind ${wind != null ? Math.round(wind) + ' kn' : ''}${gust != null ? ', stoten ' + Math.round(gust) + ' kn' : ''}`);
+  const wvd = atDir(wxData.wdirWave, t);
+  html += kv(wave != null ? `${wave.toFixed(1)} m uit ${dirName(wvd)}` : '?', `golfhoogte${wper != null ? ', periode ' + wper.toFixed(0) + ' s' : ''}`);
+  html += kv(cur != null ? (cur * 1.944).toFixed(1) + ' kn' : '?', `stroming richting ${dirName(cdir)}`);
+  html += '</div>';
+  if (wvd != null && wave != null) {
+    const legs = mode === 'breng'
+      ? [['Oudeschild → Den Helder', 'os', 'dhh', 'osdh'], ['Den Helder → verkenner', 'dhh', 'sgv', 'dhsgv'], ['Verkenner → Oudeschild', 'sgv', 'os', 'sgvos']]
+      : [['Oudeschild → verkenner', 'os', 'sgv', 'sgvos'], ['Verkenner → Den Helder', 'sgv', 'dhh', 'dhsgv'], ['Den Helder → Oudeschild', 'dhh', 'os', 'osdh']];
+    html += '<p class="muted" style="margin-bottom:0">' + legs.map(([n, a, b, e]) => {
+      const pct = Math.round((waveCorr(a, b, EXPOSE[e], t) - 1) * 100);
+      return `${n}: ${seaText(seaRel(bearing(LOC[a], LOC[b]), wvd))} (${pct >= 0 ? '+' : ''}${pct}%)`;
+    }).join('<br>') + '</p>';
+  }
+  if (st) html += `<p class="muted">Maximaal tijdens de hele tocht: wind ${st.wind != null ? bft(st.wind) + ' Bft' : '?'}${st.gust != null ? ' (stoten ' + Math.round(st.gust) + ' kn)' : ''}, golven ${st.wave != null ? st.wave.toFixed(1) + ' m' : '?'}.</p>`;
+
+  // wind tegen stroom → kortere, steilere golven
+  if (wdir != null && cdir != null && cur != null && cur * 1.944 > 0.7 && wind != null && bft(wind) >= 4) {
+    let diff = Math.abs(((wdir - cdir) % 360 + 360) % 360); if (diff > 180) diff = 360 - diff;
+    // wdir = waar wind vandaan komt; cdir = waar stroom naartoe gaat. Wind tegen stroom als die ongeveer gelijk zijn.
+    if (diff < 60) html += `<p class="warn">⚠ Wind tegen stroom: rekening houden met korte, steile golven.</p>`;
+  }
+
+  // getij
+  const ex = tideExtremes();
+  if (ex.length) {
+    const s = sc.start.getTime() - 8 * 3600e3, e = sc.end.getTime() + 8 * 3600e3;
+    const near = ex.filter(x => x.time >= s && x.time <= e);
+    const prev = [...ex].reverse().find(x => x.time <= t);
+    const next = ex.find(x => x.time > t);
+    let state = '';
+    if (prev && next) state = prev.type === 'LW' ? `<b>opkomend water (vloed)</b> – HW om ${fmt(next.time)}` : `<b>afgaand water (eb)</b> – LW om ${fmt(next.time)}`;
+    html += `<h2 style="margin-top:1em">Getij Den Helder</h2>`;
+    if (state) html += `<p style="margin-top:0">Bij de verkenner: ${state}.</p>`;
+    html += `<p class="muted">${near.map(x => `${x.type} ${fmt(x.time)} (${x.h >= 0 ? '+' : ''}${Math.round(x.h * 100)} cm)`).join(' · ')}</p>`;
+    html += `<p class="muted">Getijtijden uit zeemodel, kunnen 10–30 min afwijken. Controleer bij <a href="https://waterinfo.rws.nl/publiek/astronomische-getij/denhelder.marsdiep/details" target="_blank">RWS astronomisch getij</a>.</p>`;
+  }
+  html += `<p class="muted">Verwachting opgehaald ${fmt(wxData.fetched)}. <button class="small" onclick="loadWx(true)">Vernieuwen</button></p>`;
+  $('wx').innerHTML = html;
+}
+
+// ---------- Data ophalen (Open-Meteo, gratis, geen sleutel) ----------
+let loadedFor = null;
+async function loadWx(force) {
+  const d = new Date($('date').value + 'T00:00');
+  const start = isoDate(addMin(d, -1440)), end = isoDate(addMin(d, 2 * 1440));
+  if (!force && loadedFor === start) { render(); return; }
+  loadedFor = start;
+  $('wx').textContent = 'Verwachting laden…';
+  const q = (base, loc, params) => `${base}?latitude=${loc.lat}&longitude=${loc.lon}&${params}&timezone=Europe%2FAmsterdam&start_date=${start}&end_date=${end}`;
+  try {
+    const [w, m, tide] = await Promise.all([
+      fetch(q('https://api.open-meteo.com/v1/forecast', LOC.sgv, 'hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn')).then(r => r.json()),
+      fetch(q('https://marine-api.open-meteo.com/v1/marine', LOC.sgv, 'hourly=wave_height,wave_period,wave_direction,ocean_current_velocity,ocean_current_direction')).then(r => r.json()),
+      fetch(q('https://marine-api.open-meteo.com/v1/marine', LOC.dh, 'hourly=sea_level_height_msl')).then(r => r.json()),
+    ]);
+    if (w.error || m.error) throw new Error(w.reason || m.reason);
+    const times = w.hourly.time.map(s => new Date(s));
+    const align = (src, key) => { // koppel op tijdstring
+      if (!src || !src.hourly || !src.hourly[key]) return times.map(() => null);
+      const map = new Map(src.hourly.time.map((s, i) => [s, src.hourly[key][i]]));
+      return w.hourly.time.map(s => map.has(s) ? map.get(s) : null);
+    };
+    wxData = {
+      times, fetched: new Date(),
+      wind: w.hourly.wind_speed_10m, gust: w.hourly.wind_gusts_10m, wdir: w.hourly.wind_direction_10m,
+      wave: align(m, 'wave_height'), wper: align(m, 'wave_period'), wdirWave: align(m, 'wave_direction'),
+      cur: align(m, 'ocean_current_velocity').map(v => v == null ? null : v / 3.6), // km/h -> m/s
+      cdir: align(m, 'ocean_current_direction'),
+      sea: align(tide, 'sea_level_height_msl'),
+    };
+  } catch (e) {
+    wxData = { error: 'Kon verwachting niet ophalen (' + e.message + '). Kies de omstandigheden handmatig.', times: [], wind: [], gust: [], wave: [], sea: [] };
+  }
+  render();
+}
+
+// ---------- Instellingen-UI ----------
+function buildSettings() {
+  $('settings').innerHTML = Object.keys(DEFAULTS).map(k =>
+    `<label for="s_${k}" style="font-size:.9rem;color:var(--ink)">${LABELS[k]}</label><input id="s_${k}" type="number" step="${k[0] === 'f' || k === 'golfTegen' ? '0.05' : '1'}" value="${S[k]}">`).join('');
+  Object.keys(DEFAULTS).forEach(k => $('s_' + k).addEventListener('input', e => {
+    const v = parseFloat(e.target.value); if (isNaN(v)) return;
+    S[k] = v; localStorage.setItem('loods-settings', JSON.stringify(S)); render();
+  }));
+}
+$('reset').onclick = () => { S = Object.assign({}, DEFAULTS); localStorage.removeItem('loods-settings'); buildSettings(); render(); };
+
+// ---------- Start ----------
+function nextWeekday(dow) { // 4 = donderdag, 6 = zaterdag
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
+  return d;
+}
+function setMode(m) {
+  mode = m;
+  $('bBreng').classList.toggle('on', m === 'breng');
+  $('bHaal').classList.toggle('on', m === 'haal');
+  $('date').value = isoDate(nextWeekday(m === 'breng' ? 4 : 6));
+  loadWx();
+}
+$('bBreng').onclick = () => setMode('breng');
+$('bHaal').onclick = () => setMode('haal');
+$('date').onchange = () => loadWx();
+$('time').oninput = render;
+$('cond').onchange = render;
+buildSettings();
+setMode('breng');
+</script>
+</body>
+</html>
