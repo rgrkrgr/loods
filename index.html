@@ -146,6 +146,7 @@ const fmt = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
 const addMin = (d, m) => new Date(d.getTime() + Math.round(m) * 60000);
 const isoDate = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const floor5 = d => new Date(Math.floor(d.getTime() / 300000) * 300000); // afronden naar beneden op 5 min
+const round5 = d => new Date(Math.round(d.getTime() / 300000) * 300000); // afronden op dichtstbijzijnde 5 min
 const dur = m => Math.floor(m / 60) + ':' + pad(Math.round(m % 60));
 const DIRS = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
 const dirName = deg => deg == null ? '?' : DIRS[Math.round(deg / 22.5) % 16];
@@ -211,6 +212,7 @@ function schedule(cond) {
       ['Aankomst Oudeschild', back, ''],
     ];
   }
+  rows = rows.map((r, i) => i === 0 || r[3] ? r : [r[0], round5(r[1]), r[2]]);
   return { rows, start: rows[0][1], end: rows[rows.length - 1][1], sgvTime, f };
 }
 
